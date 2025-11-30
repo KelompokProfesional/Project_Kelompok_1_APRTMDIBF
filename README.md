@@ -2,7 +2,7 @@
 Leader : 
 2023240033_Ravi Ahmad
 
-Anggota : /n
+Anggota :
 2023240002_Sena Pratama
 2023240027_Azriel Raihansyah Faisol
 2023240014_Gienza Zidan Athalah
