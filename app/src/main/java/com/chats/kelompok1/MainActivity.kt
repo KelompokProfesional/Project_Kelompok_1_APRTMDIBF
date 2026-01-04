@@ -128,4 +128,3 @@ class MainActivity : AppCompatActivity() {
             if (auth.currentUser != null) View.VISIBLE else View.GONE
     }
 }
-
