@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        // ✅ CONTROL LOGOUT VISIBILITY ON START
+        // Buat ngatur visibilitas tombol
         updateLogoutVisibility()
 
         btnGoogle.setOnClickListener {
@@ -117,12 +117,12 @@ class MainActivity : AppCompatActivity() {
         googleSignInClient.signOut().addOnCompleteListener {
             Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show()
 
-            // ✅ HIDE LOGOUT AFTER LOGOUT
+            // Biar tombol gak keliatan
             updateLogoutVisibility()
         }
     }
 
-    // ✅ SINGLE SOURCE OF TRUTH
+    // Buat update status login
     private fun updateLogoutVisibility() {
         btnLogout.visibility =
             if (auth.currentUser != null) View.VISIBLE else View.GONE
