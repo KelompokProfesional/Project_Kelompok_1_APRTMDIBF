@@ -23,6 +23,14 @@
           }
         },
         {
+          "client_id": "593321865874-mq2cobvsc2u2vsiqmjrlda4h1lh1j667.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chats.kelompok1",
+            "certificate_hash": "5305dde83521557f50c2f3f39b76b81409cd200b"
+          }
+        },
+        {
           "client_id": "593321865874-dg8u5df3sa82qlmd33hbibagtkalm5jt.apps.googleusercontent.com",
           "client_type": 3
         }
