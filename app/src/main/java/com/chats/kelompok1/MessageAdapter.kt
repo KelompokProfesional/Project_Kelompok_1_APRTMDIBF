@@ -23,7 +23,7 @@ class MessageAdapter(private val messages: List<Message>) : RecyclerView.Adapter
 
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = messages[position]
-        holder.textViewSender.text = message.senderId
+        holder.textViewSender.text = message.displayName  // Updated: Use displayName instead of senderId
         holder.textViewMessage.text = message.text
         holder.textViewTimestamp.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
     }

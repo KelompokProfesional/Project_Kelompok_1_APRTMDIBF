@@ -17,6 +17,11 @@ import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -100,12 +105,26 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // ✅ SHOW LOGOUT AFTER LOGIN
-                    updateLogoutVisibility()
+                    // Check if profile exists
+                    val uid = auth.currentUser?.uid ?: return@addOnCompleteListener
+                    FirebaseDatabase.getInstance().reference.child("users").child(uid).addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (snapshot.exists()) {
+                                // Profile exists, go to menu
+                                startActivity(Intent(this@MainActivity, MenuActivity::class.java))
+                            } else {
+                                // No profile, go to setup
+                                startActivity(Intent(this@MainActivity, ProfileSetupActivity::class.java))
+                            }
+                            finish()
+                        }
 
-                    // After sign-in success, navigate to ChatActivity
-                    startActivity(Intent(this, ChatActivity::class.java))
-                    finish()  // Optional: close login screen so user can't go back to it
+                        override fun onCancelled(error: DatabaseError) {
+                            Toast.makeText(this@MainActivity, "Error checking profile", Toast.LENGTH_SHORT).show()
+                        }
+                    })
+
+                    updateLogoutVisibility()
                 } else {
                     Toast.makeText(
                         this,
@@ -116,6 +135,9 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+        // After sign-in success, navigate to MenuActivity
+//        startActivity(Intent(this, MenuActivity::class.java))
+//        finish()
     private fun logout() {
         auth.signOut()
         googleSignInClient.signOut().addOnCompleteListener {

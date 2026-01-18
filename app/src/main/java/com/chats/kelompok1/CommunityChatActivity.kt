@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
-class ChatActivity : AppCompatActivity() {
+class CommunityChatActivity : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var messageAdapter: MessageAdapter
     private val messages = mutableListOf<Message>()
@@ -19,9 +19,8 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var sendButton: Button
     private lateinit var auth: FirebaseAuth
     private var valueEventListener: ValueEventListener? = null
-    private lateinit var targetUserId: String
-    private var currentUserId = "Anonymous"
-    private var currentDisplayName = "Anonymous"
+    private var currentUserId = "Anonymous"  // Added: Declare as class variable
+    private var currentDisplayName = "Anonymous"  // Added: Declare as class variable
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,9 +28,8 @@ class ChatActivity : AppCompatActivity() {
 
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance().reference
-        targetUserId = intent.getStringExtra("TARGET_USER_ID") ?: "Anonymous"
 
-        // Fetch user profile
+        // Fetch user profile (added)
         val uid = auth.currentUser?.uid ?: return
         database.child("users").child(uid).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -40,12 +38,9 @@ class ChatActivity : AppCompatActivity() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@ChatActivity, "Error loading profile: ${error.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CommunityChatActivity, "Error loading profile: ${error.message}", Toast.LENGTH_SHORT).show()
             }
         })
-
-        val chatId = getChatId(currentUserId, targetUserId)
-        database = database.child("chats").child(chatId)
 
         recyclerView = findViewById(R.id.recyclerViewMessages)
         messageEditText = findViewById(R.id.editTextMessage)
@@ -59,19 +54,15 @@ class ChatActivity : AppCompatActivity() {
             val messageText = messageEditText.text.toString().trim()
             if (messageText.isNotEmpty()) {
                 val message = Message(
-                    senderId = currentUserId,
+                    senderId = currentUserId,        // Use named parameters
                     displayName = currentDisplayName,
                     text = messageText,
                     timestamp = System.currentTimeMillis()
                 )
-                database.push().setValue(message)
+                database.child("chats").push().setValue(message)
                 messageEditText.text.clear()
             }
         }
-    }
-
-    private fun getChatId(userId1: String, userId2: String): String {
-        return if (userId1 < userId2) "${userId1}_$userId2" else "${userId2}_$userId1"
     }
 
     override fun onStart() {
@@ -89,14 +80,14 @@ class ChatActivity : AppCompatActivity() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@ChatActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CommunityChatActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
             }
         }
-        database.addValueEventListener(valueEventListener!!)
+        database.child("chats").addValueEventListener(valueEventListener!!)
     }
 
     override fun onStop() {
         super.onStop()
-        valueEventListener?.let { database.removeEventListener(it) }
+        valueEventListener?.let { database.child("chats").removeEventListener(it) }
     }
 }

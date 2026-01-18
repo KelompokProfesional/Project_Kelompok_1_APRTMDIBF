@@ -12,6 +12,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Kelompok1">
         <activity
+            android:name=".ProfileSetupActivity"
+            android:exported="false" />
+        <activity
+            android:name=".CommunityChatActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MenuActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SelectUserActivity"
+            android:exported="false" />
+        <activity
             android:name=".ChatActivity"
             android:exported="false" />
         <activity
