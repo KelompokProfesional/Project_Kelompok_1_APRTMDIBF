@@ -102,6 +102,10 @@ class MainActivity : AppCompatActivity() {
 
                     // ✅ SHOW LOGOUT AFTER LOGIN
                     updateLogoutVisibility()
+
+                    // After sign-in success, navigate to ChatActivity
+                    startActivity(Intent(this, ChatActivity::class.java))
+                    finish()  // Optional: close login screen so user can't go back to it
                 } else {
                     Toast.makeText(
                         this,
