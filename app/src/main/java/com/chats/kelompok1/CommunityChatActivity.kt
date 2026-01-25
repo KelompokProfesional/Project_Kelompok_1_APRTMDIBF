@@ -1,8 +1,8 @@
 package com.chats.kelompok1
 
 import android.os.Bundle
-import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -14,80 +14,72 @@ class CommunityChatActivity : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var messageAdapter: MessageAdapter
     private val messages = mutableListOf<Message>()
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var messageEditText: EditText
-    private lateinit var sendButton: Button
     private lateinit var auth: FirebaseAuth
-    private var valueEventListener: ValueEventListener? = null
-    private var currentUserId = "Anonymous"  // Added: Declare as class variable
-    private var currentDisplayName = "Anonymous"  // Added: Declare as class variable
+
+    private var currentUserId = "Anonymous"
+    private var currentDisplayName = "Anonymous"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_chat)
+        setContentView(R.layout.activity_community_chat)
 
+        // 1. Inisialisasi Firebase
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance().reference
+        val uid = auth.currentUser?.uid ?: ""
 
-        // Fetch user profile (added)
-        val uid = auth.currentUser?.uid ?: return
+        // 2. Inisialisasi View (ID harus sama dengan XML)
+        val recyclerView = findViewById<RecyclerView>(R.id.rvCommunityMessages)
+        val etMessage = findViewById<EditText>(R.id.etCommunityMessage)
+        val btnSend = findViewById<ImageButton>(R.id.btnCommunitySend)
+
+        // 3. Setup Adapter
+        messageAdapter = MessageAdapter(messages, currentUserId)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = messageAdapter
+
+        // 4. Ambil Profil User (untuk identitas pengirim)
         database.child("users").child(uid).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 currentUserId = snapshot.child("userId").getValue(String::class.java) ?: "Anonymous"
                 currentDisplayName = snapshot.child("displayName").getValue(String::class.java) ?: "Anonymous"
+                messageAdapter.updateUserId(currentUserId)
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@CommunityChatActivity, "Error loading profile: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
+            override fun onCancelled(error: DatabaseError) {}
         })
 
-        recyclerView = findViewById(R.id.recyclerViewMessages)
-        messageEditText = findViewById(R.id.editTextMessage)
-        sendButton = findViewById(R.id.buttonSend)
-
-        messageAdapter = MessageAdapter(messages)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = messageAdapter
-
-        sendButton.setOnClickListener {
-            val messageText = messageEditText.text.toString().trim()
-            if (messageText.isNotEmpty()) {
-                val message = Message(
-                    senderId = currentUserId,        // Use named parameters
+        // 5. Logika Kirim Pesan ke Node "community"
+        btnSend.setOnClickListener {
+            val text = etMessage.text.toString().trim()
+            if (text.isNotEmpty()) {
+                val msg = Message(
+                    senderId = currentUserId,
                     displayName = currentDisplayName,
-                    text = messageText,
+                    text = text,
                     timestamp = System.currentTimeMillis()
                 )
-                database.child("chats").push().setValue(message)
-                messageEditText.text.clear()
+                database.child("community").push().setValue(msg)
+                etMessage.text.clear()
             }
         }
-    }
 
-    override fun onStart() {
-        super.onStart()
-        valueEventListener = object : ValueEventListener {
+        // 6. Dengarkan Pesan Masuk secara Real-time
+        database.child("community").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 messages.clear()
                 for (child in snapshot.children) {
-                    val message = child.getValue(Message::class.java)
-                    message?.let { messages.add(it) }
+                    val m = child.getValue(Message::class.java)
+                    m?.let { messages.add(it) }
                 }
                 messages.sortBy { it.timestamp }
                 messageAdapter.notifyDataSetChanged()
-                recyclerView.scrollToPosition(messages.size - 1)
+                if (messages.isNotEmpty()) {
+                    recyclerView.scrollToPosition(messages.size - 1)
+                }
             }
-
             override fun onCancelled(error: DatabaseError) {
                 Toast.makeText(this@CommunityChatActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
             }
-        }
-        database.child("chats").addValueEventListener(valueEventListener!!)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        valueEventListener?.let { database.child("chats").removeEventListener(it) }
+        })
     }
 }

@@ -8,25 +8,57 @@ import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MessageAdapter(private val messages: List<Message>) : RecyclerView.Adapter<MessageAdapter.MessageViewHolder>() {
+class MessageAdapter(
+    private val messages: List<Message>,
+    private var currentUserId: String // Parameter yang menyebabkan error tadi
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val textViewSender: TextView = itemView.findViewById(R.id.textViewSender)
-        val textViewMessage: TextView = itemView.findViewById(R.id.textViewMessage)
-        val textViewTimestamp: TextView = itemView.findViewById(R.id.textViewTimestamp)
+    private val VIEW_TYPE_SENT = 1
+    private val VIEW_TYPE_RECEIVED = 2
+
+    fun updateUserId(newId: String) {
+        this.currentUserId = newId
+        notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false)
-        return MessageViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (messages[position].senderId == currentUserId) VIEW_TYPE_SENT else VIEW_TYPE_RECEIVED
     }
 
-    override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_SENT) {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_message_sent, parent, false)
+            SentViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_message_received, parent, false)
+            ReceivedViewHolder(view)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
-        holder.textViewSender.text = message.displayName  // Updated: Use displayName instead of senderId
-        holder.textViewMessage.text = message.text
-        holder.textViewTimestamp.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
+        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
+
+        if (holder is SentViewHolder) {
+            holder.messageText.text = message.text
+            holder.timestampText.text = time
+        } else if (holder is ReceivedViewHolder) {
+            holder.senderName.text = message.displayName
+            holder.messageText.text = message.text
+            holder.timestampText.text = time
+        }
     }
 
     override fun getItemCount() = messages.size
+
+    class SentViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val messageText: TextView = v.findViewById(R.id.textViewMessage)
+        val timestampText: TextView = v.findViewById(R.id.textViewTimestamp)
+    }
+
+    class ReceivedViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val senderName: TextView = v.findViewById(R.id.textViewSender)
+        val messageText: TextView = v.findViewById(R.id.textViewMessage)
+        val timestampText: TextView = v.findViewById(R.id.textViewTimestamp)
+    }
 }

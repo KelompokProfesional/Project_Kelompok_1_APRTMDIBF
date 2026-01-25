@@ -18,6 +18,9 @@
             android:name=".CommunityChatActivity"
             android:exported="false" />
         <activity
+            android:name=".JoinRoomActivity"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".MenuActivity"
             android:exported="false" />
         <activity

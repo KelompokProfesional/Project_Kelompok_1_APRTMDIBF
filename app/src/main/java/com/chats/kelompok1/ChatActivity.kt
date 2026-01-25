@@ -1,9 +1,9 @@
 package com.chats.kelompok1
 
 import android.os.Bundle
-import android.widget.Button
 import android.widget.EditText
-import android.widget.Toast
+import android.widget.ImageButton
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -11,15 +11,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
 class ChatActivity : AppCompatActivity() {
-    private lateinit var database: DatabaseReference
+    private lateinit var rootDatabase: DatabaseReference
+    private lateinit var messagesRef: DatabaseReference
     private lateinit var messageAdapter: MessageAdapter
     private val messages = mutableListOf<Message>()
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var messageEditText: EditText
-    private lateinit var sendButton: Button
     private lateinit var auth: FirebaseAuth
     private var valueEventListener: ValueEventListener? = null
-    private lateinit var targetUserId: String
+
+    private lateinit var myUid: String
     private var currentUserId = "Anonymous"
     private var currentDisplayName = "Anonymous"
 
@@ -28,32 +27,34 @@ class ChatActivity : AppCompatActivity() {
         setContentView(R.layout.activity_chat)
 
         auth = FirebaseAuth.getInstance()
-        database = FirebaseDatabase.getInstance().reference
-        targetUserId = intent.getStringExtra("TARGET_USER_ID") ?: "Anonymous"
+        rootDatabase = FirebaseDatabase.getInstance().reference
+        myUid = auth.currentUser?.uid ?: ""
 
-        // Fetch user profile
-        val uid = auth.currentUser?.uid ?: return
-        database.child("users").child(uid).addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                currentUserId = snapshot.child("userId").getValue(String::class.java) ?: "Anonymous"
-                currentDisplayName = snapshot.child("displayName").getValue(String::class.java) ?: "Anonymous"
-            }
+        val targetId = intent.getStringExtra("TARGET_USER_ID") ?: ""
 
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@ChatActivity, "Error loading profile: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        // Menghubungkan variabel dengan ID tvChatTitle di XML
+        val tvTitle = findViewById<TextView>(R.id.tvChatTitle)
 
-        val chatId = getChatId(currentUserId, targetUserId)
-        database = database.child("chats").child(chatId)
+        // Logika Folder: Handle Room vs Private Chat
+        val chatId = if (targetId.startsWith("ROOM_")) {
+            tvTitle.text = targetId.replace("ROOM_", "Room: ")
+            targetId
+        } else {
+            tvTitle.text = "Private Chat"
+            if (myUid < targetId) "${myUid}_$targetId" else "${targetId}_$myUid"
+        }
 
-        recyclerView = findViewById(R.id.recyclerViewMessages)
-        messageEditText = findViewById(R.id.editTextMessage)
-        sendButton = findViewById(R.id.buttonSend)
+        messagesRef = rootDatabase.child("chats").child(chatId)
 
-        messageAdapter = MessageAdapter(messages)
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerViewMessages)
+        val messageEditText = findViewById<EditText>(R.id.editTextMessage)
+        val sendButton = findViewById<ImageButton>(R.id.buttonSend)
+
+        messageAdapter = MessageAdapter(messages, currentUserId)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = messageAdapter
+
+        fetchMyProfile()
 
         sendButton.setOnClickListener {
             val messageText = messageEditText.text.toString().trim()
@@ -64,14 +65,21 @@ class ChatActivity : AppCompatActivity() {
                     text = messageText,
                     timestamp = System.currentTimeMillis()
                 )
-                database.push().setValue(message)
+                messagesRef.push().setValue(message)
                 messageEditText.text.clear()
             }
         }
     }
 
-    private fun getChatId(userId1: String, userId2: String): String {
-        return if (userId1 < userId2) "${userId1}_$userId2" else "${userId2}_$userId1"
+    private fun fetchMyProfile() {
+        rootDatabase.child("users").child(myUid).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                currentUserId = snapshot.child("userId").getValue(String::class.java) ?: "Anonymous"
+                currentDisplayName = snapshot.child("displayName").getValue(String::class.java) ?: "Anonymous"
+                messageAdapter.updateUserId(currentUserId)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     override fun onStart() {
@@ -85,18 +93,17 @@ class ChatActivity : AppCompatActivity() {
                 }
                 messages.sortBy { it.timestamp }
                 messageAdapter.notifyDataSetChanged()
-                recyclerView.scrollToPosition(messages.size - 1)
+                if (messages.isNotEmpty()) {
+                    findViewById<RecyclerView>(R.id.recyclerViewMessages).scrollToPosition(messages.size - 1)
+                }
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@ChatActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
-            }
+            override fun onCancelled(error: DatabaseError) {}
         }
-        database.addValueEventListener(valueEventListener!!)
+        messagesRef.addValueEventListener(valueEventListener!!)
     }
 
     override fun onStop() {
         super.onStop()
-        valueEventListener?.let { database.removeEventListener(it) }
+        valueEventListener?.let { messagesRef.removeEventListener(it) }
     }
 }
