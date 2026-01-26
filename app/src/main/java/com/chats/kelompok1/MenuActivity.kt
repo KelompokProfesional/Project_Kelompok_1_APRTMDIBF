@@ -29,13 +29,14 @@ class MenuActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance().reference
 
+        // Inisialisasi View dari activity_menu.xml
         recyclerViewMenu = findViewById(R.id.recyclerViewMenu)
         layoutEmptyState = findViewById(R.id.layoutEmptyState)
         val searchView = findViewById<SearchView>(R.id.searchViewUsers)
         val cvProfileBtn = findViewById<CardView>(R.id.cvProfileBtn)
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
 
-        // Setup Adapter: Mendukung klik pada daftar chat aktif
+        // Setup Adapter dengan listener klik untuk masuk ke ChatActivity
         userAdapter = UserAdapter { userMap ->
             val intent = Intent(this, ChatActivity::class.java)
             intent.putExtra("TARGET_USER_ID", userMap["uid"])
@@ -45,10 +46,10 @@ class MenuActivity : AppCompatActivity() {
         recyclerViewMenu.layoutManager = LinearLayoutManager(this)
         recyclerViewMenu.adapter = userAdapter
 
-        fetchAllData()
+        fetchAllData() // Ambil data awal (Users untuk Search & Chats untuk Home)
         setupBottomNavigation(bottomNav)
 
-        // Logika Search Hybrid
+        // Logika Hybrid Search: Chat Aktif vs Semua User
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(q: String?): Boolean = false
             override fun onQueryTextChange(newText: String?): Boolean {
@@ -59,6 +60,7 @@ class MenuActivity : AppCompatActivity() {
             }
         })
 
+        // Navigasi ke halaman profil yang sudah ada
         cvProfileBtn.setOnClickListener {
             startActivity(Intent(this, ProfileSetupActivity::class.java))
         }
@@ -66,15 +68,16 @@ class MenuActivity : AppCompatActivity() {
 
     private fun setupBottomNavigation(nav: BottomNavigationView) {
         nav.selectedItemId = R.id.nav_chats
-        // Di dalam setupBottomNavigation
         nav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_chats -> true
-                R.id.nav_users -> { // Menu Private Room
+                R.id.nav_chats -> true // Tetap di halaman ini
+                R.id.nav_users -> {
+                    // Membuka fitur Private Room (sebelumnya Search)
                     startActivity(Intent(this, JoinRoomActivity::class.java))
-                    false // Kembalikan false agar ikon 'Chats' tetap menyala sebagai home
+                    false
                 }
                 R.id.nav_community -> {
+                    // Membuka Community Chat
                     startActivity(Intent(this, CommunityChatActivity::class.java))
                     false
                 }
@@ -86,7 +89,7 @@ class MenuActivity : AppCompatActivity() {
     private fun fetchAllData() {
         val myUid = auth.currentUser?.uid ?: return
 
-        // Ambil semua user untuk database pencarian
+        // 1. Ambil database SEMUA user untuk kebutuhan pencarian
         database.child("users").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val allList = mutableListOf<Map<String, String>>()
@@ -105,12 +108,13 @@ class MenuActivity : AppCompatActivity() {
             override fun onCancelled(error: DatabaseError) {}
         })
 
-        // Ambil riwayat chat aktif untuk halaman depan
+        // 2. Pantau folder 'chats' untuk menampilkan chat aktif secara otomatis
         database.child("chats").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val activeUids = mutableListOf<String>()
                 for (chatSnap in snapshot.children) {
                     val chatId = chatSnap.key ?: ""
+                    // Filter chat yang melibatkan saya dan bukan folder ROOM
                     if (chatId.contains(myUid) && chatSnap.hasChildren() && !chatId.startsWith("ROOM_")) {
                         val otherUid = chatId.replace(myUid, "").replace("_", "")
                         activeUids.add(otherUid)
@@ -136,6 +140,7 @@ class MenuActivity : AppCompatActivity() {
                         ))
                     }
                 }
+                // Tampilkan di halaman utama jika tidak sedang mencari
                 userAdapter.setActiveChats(activeList, isSearching)
                 updateVisibility()
             }
