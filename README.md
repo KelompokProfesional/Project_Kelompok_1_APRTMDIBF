@@ -11,7 +11,7 @@ Anggota : <br>
 2023240021_Yonatan Suryoadi Susilo <br>
 
 Tentang Project : <br>
-Nama Aplikasi : IChat (Integrated Chat)<br>
+Nama Aplikasi : Xates (Integrated Chat)<br>
 Tentang : Aplikasi chatting dengan tujuan utama kompatibilitas tinggi<br>
 <br>
 # Fitur-fitur dan kriteria serta tambahan/opsional
